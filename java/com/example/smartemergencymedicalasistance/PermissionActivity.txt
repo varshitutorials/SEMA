@@ -1,0 +1,172 @@
+package com.example.smartemergencymedicalasistance;
+
+import android.Manifest;
+import android.app.AlertDialog;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Bundle;
+import android.provider.Settings;
+import android.widget.Button;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
+public class PermissionActivity extends AppCompatActivity {
+    private static final int PERMISSION_REQUEST_CODE = 100;
+    private static final String PREFS_NAME = "app_prefs";
+    private static final String PROFILE_COMPLETE_KEY = "profile_complete";
+
+    private final String[] REQUIRED_PERMISSIONS = {
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.CALL_PHONE,
+            Manifest.permission.ACCESS_FINE_LOCATION
+    };
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_permission);
+
+
+
+        Button grantButton = findViewById(R.id.grantPermissionsBtn);
+        grantButton.setOnClickListener(v -> checkAndRequestPermissions());
+
+        // Immediate check if we already have permissions
+        if (hasAllPermissions()) {
+            proceedAfterPermissions();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Check if we're returning from Settings with new permissions
+        if (getIntent() != null && getIntent().getBooleanExtra("from_settings", false)) {
+            checkAndRequestPermissions();
+        }
+    }
+
+    private void checkAndRequestPermissions() {
+        if (hasAllPermissions()) {
+            proceedAfterPermissions();
+            return;
+        }
+
+        if (shouldShowPermissionRationale()) {
+            showRationaleDialog();
+        } else {
+            requestPermissions();
+        }
+    }
+
+    private boolean hasAllPermissions() {
+        for (String permission : REQUIRED_PERMISSIONS) {
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean shouldShowPermissionRationale() {
+        for (String permission : REQUIRED_PERMISSIONS) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void showRationaleDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Essential Permissions Needed")
+                .setMessage("This app requires:\n\n• SMS - To send emergency alerts\n• Phone Calls - To contact emergency services\n• Location - To find nearby hospitals\n\nWithout these, critical features won't work.")
+                .setPositiveButton("Continue", (d, w) -> requestPermissions())
+                .setNegativeButton("Exit", (d, w) -> finish())
+                .setCancelable(false)
+                .show();
+    }
+
+    private void requestPermissions() {
+        ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, PERMISSION_REQUEST_CODE);
+    }
+
+    private void proceedAfterPermissions() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            navigateToLogin();
+            return;
+        }
+
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean isProfileComplete = prefs.getBoolean(PROFILE_COMPLETE_KEY, false);
+
+        Intent intent = isProfileComplete ?
+                new Intent(this, SosActivity.class) :
+                new Intent(this, ProfileActivity.class);
+
+        startActivity(intent);
+        finish();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (hasAllPermissions()) {
+                proceedAfterPermissions();
+            } else {
+                handlePermissionDenial();
+            }
+        }
+    }
+
+    private void handlePermissionDenial() {
+        if (hasPermanentlyDeniedPermissions()) {
+            showSettingsDialog();
+        } else {
+            Toast.makeText(this, "All permissions are required for full functionality", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private boolean hasPermanentlyDeniedPermissions() {
+        for (String permission : REQUIRED_PERMISSIONS) {
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(this, permission) &&
+                    ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void showSettingsDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Required Permissions Denied")
+                .setMessage("You've permanently denied some permissions. Please enable them in app settings.")
+                .setPositiveButton("Open Settings", (d, w) -> openAppSettings())
+                .setNegativeButton("Exit App", (d, w) -> finish())
+                .setCancelable(false)
+                .show();
+    }
+
+    private void openAppSettings() {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        intent.setData(Uri.fromParts("package", getPackageName(), null));
+        intent.putExtra("from_settings", true);
+        startActivity(intent);
+    }
+
+    private void navigateToLogin() {
+        startActivity(new Intent(this, LoginActivity.class));
+        finish();
+    }
+}

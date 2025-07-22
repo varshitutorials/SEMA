@@ -1,0 +1,38 @@
+package com.example.smartemergencymedicalasistance.models;
+
+public class Hospital {
+    private String name;
+    private String driverNumber;
+    private String doctorNumber;
+    private double latitude;
+    private double longitude;
+
+    // Empty constructor for Firestore
+    public Hospital() {}
+
+    // Constructor with all fields
+    public Hospital(String name, String driverNumber, String doctorNumber,
+                    double latitude, double longitude) {
+        this.name = name;
+        this.driverNumber = driverNumber;
+        this.doctorNumber = doctorNumber;
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    // Getters and setters
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getDriverNumber() { return driverNumber; }
+    public void setDriverNumber(String driverNumber) { this.driverNumber = driverNumber; }
+
+    public String getDoctorNumber() { return doctorNumber; }
+    public void setDoctorNumber(String doctorNumber) { this.doctorNumber = doctorNumber; }
+
+    public double getLatitude() { return latitude; }
+    public void setLatitude(double latitude) { this.latitude = latitude; }
+
+    public double getLongitude() { return longitude; }
+    public void setLongitude(double longitude) { this.longitude = longitude; }
+}

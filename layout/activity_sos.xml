@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#e0e0e0"
+    android:padding="24dp">
+
+    <!-- Top Bar with Emergency Status and Profile -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_alignParentTop="true"
+        android:gravity="center_vertical">
+
+        <!-- Emergency Status -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="@android:color/white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Emergency Status"
+                    android:textSize="16sp"
+                    android:textColor="#212121"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/tvEmergencyStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="SYSTEM READY"
+                    android:textSize="18sp"
+                    android:textColor="#4CAF50"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Profile Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/profileBtn"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginStart="16dp"
+            android:text="Profile"
+            android:textSize="14sp"
+            app:strokeColor="#0000CD"
+            app:strokeWidth="2dp"
+            app:cornerRadius="8dp"
+            android:textColor="#0000CD"/>
+    </LinearLayout>
+
+    <!-- SOS Button (Center) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/sosBtn"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_centerInParent="true"
+        android:text="SOS"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1"
+        app:icon="@drawable/ic_sos"
+        app:iconGravity="textTop"
+        app:iconPadding="8dp"
+        app:iconSize="48dp"
+        app:cornerRadius="100dp"
+        app:backgroundTint="#8B0000"
+        app:elevation="8dp"
+        app:rippleColor="#FF0000"/>
+
+    <!-- Emergency Contacts Chip Group (Bottom) -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipGroupContacts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="16dp"
+        app:singleSelection="true">
+
+        <com.google.android.material.chip.Chip
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hospital"
+            app:chipBackgroundColor="#0000CD"
+            app:chipStrokeColor="#0000CD"
+            android:textColor="@android:color/white"/>
+
+        <com.google.android.material.chip.Chip
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Family"
+            app:chipBackgroundColor="#0000CD"
+            app:chipStrokeColor="#0000CD"
+            android:textColor="@android:color/white"/>
+    </com.google.android.material.chip.ChipGroup>
+
+</RelativeLayout>

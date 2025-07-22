@@ -1,0 +1,36 @@
+package com.example.smartemergencymedicalasistance.utils;
+
+import android.location.Location;
+import android.util.Log;
+
+import com.example.smartemergencymedicalasistance.models.Hospital;
+
+import java.util.List;
+
+public class LocationHelper {
+    public static Hospital findNearestHospital(double userLat, double userLon, List<Hospital> hospitals) {
+        if (hospitals == null || hospitals.isEmpty()) return null;
+
+        Hospital nearest = null;
+        float minDistance = Float.MAX_VALUE;
+        Location userLoc = new Location("user");
+        userLoc.setLatitude(userLat);
+        userLoc.setLongitude(userLon);
+
+        for (Hospital hospital : hospitals) {
+            if (hospital == null) continue;
+
+            Location hospitalLoc = new Location("hospital");
+            hospitalLoc.setLatitude(hospital.getLatitude());
+            hospitalLoc.setLongitude(hospital.getLongitude());
+
+            float distance = userLoc.distanceTo(hospitalLoc);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearest = hospital;
+            }
+        }
+
+        return nearest;
+    }
+}

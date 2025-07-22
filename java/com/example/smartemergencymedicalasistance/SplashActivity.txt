@@ -1,0 +1,81 @@
+package com.example.smartemergencymedicalasistance;
+
+import android.Manifest;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
+import android.os.Handler;
+import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
+public class SplashActivity extends AppCompatActivity {
+
+    private static final int SPLASH_DELAY = 1500; // 1.5 seconds
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Add a small delay to show splash screen
+        new Handler().postDelayed(this::checkAuthStatus, SPLASH_DELAY);
+    }
+
+    private void checkAuthStatus() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
+        if (currentUser == null) {
+            // User not logged in, go to LoginActivity
+            startActivity(new Intent(this, LoginActivity.class));
+        } else {
+            // User is logged in, check profile completion next
+            checkProfileCompletion();
+        }
+        finish();
+    }
+
+    private void checkProfileCompletion() {
+        SharedPreferences prefs = getSharedPreferences("user_prefs", MODE_PRIVATE);
+        boolean isProfileCompleted = prefs.getBoolean("profile_completed", false);
+
+        if (!isProfileCompleted) {
+            // Profile not complete, go to ProfileActivity
+            startActivity(new Intent(this, ProfileActivity.class));
+        } else {
+            // Profile complete, now check permissions
+            checkPermissions();
+        }
+    }
+
+    private void checkPermissions() {
+        if (hasAllPermissions()) {
+            // All permissions granted, go to main activity (SosActivity)
+            startActivity(new Intent(this, SosActivity.class));
+        } else {
+            // Missing permissions, go to PermissionActivity
+            startActivity(new Intent(this, PermissionActivity.class));
+        }
+    }
+
+    private boolean hasAllPermissions() {
+        String[] requiredPermissions = {
+                Manifest.permission.SEND_SMS,
+                Manifest.permission.CALL_PHONE,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+        };
+
+        for (String permission : requiredPermissions) {
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+}

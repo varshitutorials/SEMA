@@ -1,0 +1,105 @@
+package com.example.smartemergencymedicalasistance.models;
+
+import java.util.List;
+
+public class UserProfile {
+    private String name;
+    private int age;
+    private String bloodGroup;
+    private String allergies;
+    private String medicalConditions;
+    private List<String> emergencyContacts;
+    private LocationData location;
+    private String deviceToken;
+    private String userId;
+
+    public UserProfile() {
+        // Default constructor required for Firestore
+    }
+
+    public static class LocationData {
+        private double lat;
+        private double lng;
+        private long timestamp;
+
+        public LocationData() {}
+
+        public LocationData(double lat, double lng) {
+            this.lat = lat;
+            this.lng = lng;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        public double getLat() { return lat; }
+        public void setLat(double lat) {
+            this.lat = lat;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        public double getLng() { return lng; }
+        public void setLng(double lng) {
+            this.lng = lng;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        public long getTimestamp() { return timestamp; }
+        public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+    }
+
+    // Getters and setters for all fields
+    public String getName() { return name; }
+    public void setName(String name) {
+        if (name != null && !name.trim().isEmpty()) {
+            this.name = name.trim();
+        }
+    }
+
+    public int getAge() { return age; }
+    public void setAge(int age) {
+        if (age > 0 && age < 120) {
+            this.age = age;
+        }
+    }
+
+    public String getBloodGroup() { return bloodGroup; }
+    public void setBloodGroup(String bloodGroup) {
+        if (bloodGroup != null) {
+            this.bloodGroup = bloodGroup.toUpperCase().trim();
+        }
+    }
+
+    public String getAllergies() { return allergies; }
+    public void setAllergies(String allergies) {
+        this.allergies = allergies;
+    }
+
+    public String getMedicalConditions() { return medicalConditions; }
+    public void setMedicalConditions(String medicalConditions) {
+        this.medicalConditions = medicalConditions;
+    }
+
+    public List<String> getEmergencyContacts() { return emergencyContacts; }
+    public void setEmergencyContacts(List<String> emergencyContacts) {
+        this.emergencyContacts = emergencyContacts;
+    }
+
+    public LocationData getLocation() { return location; }
+    public void setLocation(LocationData location) {
+        this.location = location;
+    }
+
+    public String getDeviceToken() { return deviceToken; }
+    public void setDeviceToken(String deviceToken) {
+        this.deviceToken = deviceToken;
+    }
+
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
+
+    public boolean isValid() {
+        return name != null && !name.isEmpty() &&
+                age > 0 &&
+                bloodGroup != null && !bloodGroup.isEmpty() &&
+                emergencyContacts != null && !emergencyContacts.isEmpty();
+    }
+}

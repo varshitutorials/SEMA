@@ -1,0 +1,270 @@
+package com.example.smartemergencymedicalasistance;
+
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.location.Location;
+import android.net.Uri;
+import android.os.Bundle;
+import android.telephony.SmsManager;
+import android.util.Log;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import com.example.smartemergencymedicalasistance.models.Hospital;
+import com.example.smartemergencymedicalasistance.utils.LocationHelper;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.Task;
+import com.google.android.material.button.MaterialButton;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+public class SosActivity extends AppCompatActivity {
+    private static final int PERMISSION_REQUEST_CODE = 100;
+    private MaterialButton sosButton, profileButton;
+    private TextView tvEmergencyStatus;
+    private FirebaseFirestore db;
+    private FusedLocationProviderClient fusedLocationClient;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_sos);
+
+        sosButton = findViewById(R.id.sosBtn);
+        profileButton = findViewById(R.id.profileBtn);
+        tvEmergencyStatus = findViewById(R.id.tvEmergencyStatus);
+        db = FirebaseFirestore.getInstance();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        // Initialize status
+        updateStatus("SYSTEM READY", Color.GREEN);
+
+        sosButton.setOnClickListener(v -> checkPermissionsAndTriggerEmergency());
+        profileButton.setOnClickListener(v -> {
+            startActivity(new Intent(this, ProfileActivity.class));
+            finish();
+        });
+
+        checkPermissions();
+    }
+
+    private void updateStatus(String status, int color) {
+        tvEmergencyStatus.setText(status);
+        tvEmergencyStatus.setTextColor(color);
+    }
+
+    private void checkPermissionsAndTriggerEmergency() {
+        if (checkPermissions()) {
+            triggerEmergency();
+        } else {
+            requestPermissions();
+            Toast.makeText(this, "Please grant all permissions to use SOS", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private boolean checkPermissions() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestPermissions() {
+        ActivityCompat.requestPermissions(this,
+                new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.SEND_SMS,
+                        Manifest.permission.CALL_PHONE
+                }, PERMISSION_REQUEST_CODE);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                updateStatus("PERMISSIONS GRANTED", Color.GREEN);
+            } else {
+                updateStatus("PERMISSIONS NEEDED", Color.RED);
+                Toast.makeText(this, "Permissions are required for SOS functionality", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void triggerEmergency() {
+        updateStatus("INITIATING EMERGENCY...", Color.YELLOW);
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+
+        getCurrentLocation(user.getUid());
+    }
+
+    private void getCurrentLocation(String userId) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        updateStatus("GETTING LOCATION...", Color.YELLOW);
+        Task<Location> locationTask = fusedLocationClient.getLastLocation();
+        locationTask.addOnSuccessListener(location -> {
+            if (location != null) {
+                updateStatus("LOCATION FOUND", Color.GREEN);
+                fetchUserAndHospitals(userId, location);
+            } else {
+                updateStatus("LOCATION ERROR", Color.RED);
+                Toast.makeText(this, "Unable to get location", Toast.LENGTH_SHORT).show();
+            }
+        }).addOnFailureListener(e -> {
+            updateStatus("LOCATION FAILED", Color.RED);
+            Toast.makeText(this, "Location error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void fetchUserAndHospitals(String userId, Location userLocation) {
+        updateStatus("FETCHING DATA...", Color.YELLOW);
+        db.collection("users").document(userId).get()
+                .addOnSuccessListener(userDoc -> {
+                    if (userDoc.exists()) {
+                        db.collection("hospitals").get()
+                                .addOnSuccessListener(hospitalDocs -> {
+                                    updateStatus("PROCESSING...", Color.YELLOW);
+                                    processHospitals(userDoc, hospitalDocs.getDocuments(), userLocation);
+                                })
+                                .addOnFailureListener(e -> {
+                                    updateStatus("DATA ERROR", Color.RED);
+                                    Log.e("SOS", "Hospital fetch error", e);
+                                    Toast.makeText(this, "Error fetching hospitals", Toast.LENGTH_SHORT).show();
+                                });
+                    } else {
+                        updateStatus("PROFILE INCOMPLETE", Color.RED);
+                        Toast.makeText(this, "Please complete your profile first", Toast.LENGTH_SHORT).show();
+                        startActivity(new Intent(this, ProfileActivity.class));
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    updateStatus("DATA ERROR", Color.RED);
+                    Log.e("SOS", "User fetch error", e);
+                    Toast.makeText(this, "Error fetching user data", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void processHospitals(DocumentSnapshot userDoc, List<DocumentSnapshot> hospitalDocs, Location userLocation) {
+        List<Hospital> hospitals = new ArrayList<>();
+
+        for (DocumentSnapshot doc : hospitalDocs) {
+            try {
+                Map<String, Object> location = (Map<String, Object>) doc.get("location");
+                if (location != null) {
+                    double lat = Double.parseDouble(location.get("lat").toString());
+                    double lng = Double.parseDouble(location.get("long").toString());
+
+                    hospitals.add(new Hospital(
+                            doc.getString("name"),
+                            doc.getString("driverNumber"),
+                            doc.getString("doctorNumber"),
+                            lat,
+                            lng
+                    ));
+                }
+            } catch (Exception e) {
+                Log.e("SOS", "Error parsing hospital", e);
+            }
+        }
+
+        Hospital nearest = LocationHelper.findNearestHospital(
+                userLocation.getLatitude(),
+                userLocation.getLongitude(),
+                hospitals
+        );
+
+        if (nearest != null) {
+            updateStatus("SENDING ALERTS...", Color.YELLOW);
+            sendEmergencyAlerts(userDoc, nearest, userLocation);
+        } else {
+            updateStatus("NO HOSPITALS FOUND", Color.RED);
+            Toast.makeText(this, "No hospitals found nearby", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void sendEmergencyAlerts(DocumentSnapshot userDoc, Hospital hospital, Location userLocation) {
+        String locationUrl = String.format("https://maps.google.com/?q=%f,%f",
+                userLocation.getLatitude(), userLocation.getLongitude());
+
+        // Send to driver
+        String driverMsg = String.format("EMERGENCY! Patient at: %s\nName: %s\nBlood: %s\nConditions: %s",
+                locationUrl,
+                userDoc.getString("name"),
+                userDoc.getString("bloodGroup"),
+                userDoc.getString("medicalConditions"));
+        sendSMS(hospital.getDriverNumber(), driverMsg);
+
+        // Send to doctor
+        String doctorMsg = String.format("EMERGENCY INCOMING!\nPatient: %s\nAge: %s\nBlood: %s\nLocation: %s",
+                userDoc.getString("name"),
+                userDoc.get("age"),
+                userDoc.getString("bloodGroup"),
+                locationUrl);
+        sendSMS(hospital.getDoctorNumber(), doctorMsg);
+
+        // Send to emergency contacts
+        List<String> contacts = (List<String>) userDoc.get("emergencyContacts");
+        if (contacts != null) {
+            String contactMsg = String.format("EMERGENCY! %s needs help!\nLocation: %s\nHospital: %s (%s)",
+                    userDoc.getString("name"),
+                    locationUrl,
+                    hospital.getName(),
+                    hospital.getDriverNumber());
+
+            for (String contact : contacts) {
+                sendSMS(contact, contactMsg);
+            }
+        }
+
+        // Call driver
+        callNumber(hospital.getDriverNumber());
+
+        updateStatus("ALERTS SENT!", Color.GREEN);
+        Toast.makeText(this, "Emergency alerts sent!", Toast.LENGTH_LONG).show();
+    }
+
+    private void sendSMS(String phoneNumber, String message) {
+        try {
+            SmsManager smsManager = SmsManager.getDefault();
+            smsManager.sendTextMessage(phoneNumber, null, message, null, null);
+        } catch (Exception e) {
+            Log.e("SOS", "SMS failed", e);
+            Toast.makeText(this, "Failed to send SMS to " + phoneNumber, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void callNumber(String phoneNumber) {
+        try {
+            Intent callIntent = new Intent(Intent.ACTION_CALL);
+            callIntent.setData(Uri.parse("tel:" + phoneNumber));
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+                startActivity(callIntent);
+            }
+        } catch (Exception e) {
+            Log.e("SOS", "Call failed", e);
+            Toast.makeText(this, "Failed to call " + phoneNumber, Toast.LENGTH_SHORT).show();
+        }
+    }
+}

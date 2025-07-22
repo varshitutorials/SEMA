@@ -1,0 +1,207 @@
+package com.example.smartemergencymedicalasistance;
+
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.smartemergencymedicalasistance.models.UserProfile;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.ArrayList;
+import java.util.List;
+import android.widget.ImageButton;
+
+public class ProfileActivity extends AppCompatActivity {
+    private static final String PREFS_NAME = "user_prefs";
+    private static final String PROFILE_COMPLETED_KEY = "profile_completed";
+
+    private FirebaseFirestore firestore;
+    private FirebaseAuth auth;
+    private EditText etName, etAge, etBloodGroup, etAllergies, etMedicalConditions;
+    private EditText etEmergencyContact1, etEmergencyContact2;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_profile);
+
+        initializeFirebase();
+        initViews();
+        checkUserAuthentication();
+
+// Back button functionality
+        ImageButton btnBack = findViewById(R.id.btnBack);
+        btnBack.setOnClickListener(v -> {
+            startActivity(new Intent(ProfileActivity.this, SosActivity.class));
+            finish();
+        });
+    }
+
+    private void initializeFirebase() {
+        firestore = FirebaseFirestore.getInstance();
+        auth = FirebaseAuth.getInstance();
+    }
+
+    private void initViews() {
+        etName = findViewById(R.id.etName);
+        etAge = findViewById(R.id.etAge);
+        etBloodGroup = findViewById(R.id.etBloodGroup);
+        etAllergies = findViewById(R.id.etAllergies);
+        etMedicalConditions = findViewById(R.id.etMedicalConditions);
+        etEmergencyContact1 = findViewById(R.id.etEmergencyContact1);
+        etEmergencyContact2 = findViewById(R.id.etEmergencyContact2);
+
+        Button btnSave = findViewById(R.id.btnSave);
+        btnSave.setOnClickListener(v -> saveProfile());
+    }
+
+    private void checkUserAuthentication() {
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) {
+            redirectToLogin();
+            return;
+        }
+        loadProfile(user.getUid());
+    }
+
+    private void redirectToLogin() {
+        startActivity(new Intent(this, LoginActivity.class));
+        finish();
+    }
+
+    private void loadProfile(String userId) {
+        firestore.collection("users").document(userId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        UserProfile profile = documentSnapshot.toObject(UserProfile.class);
+                        if (profile != null) {
+                            populateFields(profile);
+                        }
+                    }
+                })
+                .addOnFailureListener(e ->
+                        showToast("Error loading profile"));
+    }
+
+    private void populateFields(UserProfile profile) {
+        etName.setText(profile.getName());
+        etAge.setText(String.valueOf(profile.getAge()));
+        etBloodGroup.setText(profile.getBloodGroup());
+        etAllergies.setText(profile.getAllergies());
+        etMedicalConditions.setText(profile.getMedicalConditions());
+
+        List<String> contacts = profile.getEmergencyContacts();
+        if (contacts != null && !contacts.isEmpty()) {
+            if (contacts.size() > 0) etEmergencyContact1.setText(contacts.get(0));
+            if (contacts.size() > 1) etEmergencyContact2.setText(contacts.get(1));
+        }
+    }
+
+    private void saveProfile() {
+        if (!validateInputs()) return;
+
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) {
+            redirectToLogin();
+            return;
+        }
+
+        UserProfile profile = createUserProfile();
+        saveProfileToFirestore(user.getUid(), profile);
+    }
+
+    private UserProfile createUserProfile() {
+        UserProfile profile = new UserProfile();
+        profile.setName(etName.getText().toString().trim());
+        profile.setAge(Integer.parseInt(etAge.getText().toString().trim()));
+        profile.setBloodGroup(etBloodGroup.getText().toString().trim());
+        profile.setAllergies(etAllergies.getText().toString().trim());
+        profile.setMedicalConditions(etMedicalConditions.getText().toString().trim());
+        profile.setEmergencyContacts(getEmergencyContacts());
+        return profile;
+    }
+
+    private List<String> getEmergencyContacts() {
+        List<String> contacts = new ArrayList<>();
+        if (!TextUtils.isEmpty(etEmergencyContact1.getText())) {
+            contacts.add(etEmergencyContact1.getText().toString().trim());
+        }
+        if (!TextUtils.isEmpty(etEmergencyContact2.getText())) {
+            contacts.add(etEmergencyContact2.getText().toString().trim());
+        }
+        return contacts;
+    }
+
+    private void saveProfileToFirestore(String userId, UserProfile profile) {
+        firestore.collection("users").document(userId)
+                .set(profile)
+                .addOnSuccessListener(unused -> {
+                    markProfileAsCompleted();
+                    redirectToSosActivity();
+                })
+                .addOnFailureListener(e ->
+                        showToast("Failed to save profile"));
+    }
+
+    private void markProfileAsCompleted() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putBoolean(PROFILE_COMPLETED_KEY, true).apply();
+    }
+
+    private void redirectToSosActivity() {
+        showToast("Profile saved successfully");
+        startActivity(new Intent(this, SosActivity.class));
+        finish();
+    }
+
+    private boolean validateInputs() {
+        boolean isValid = true;
+
+        if (TextUtils.isEmpty(etName.getText())) {
+            etName.setError("Name is required");
+            isValid = false;
+        }
+        if (TextUtils.isEmpty(etAge.getText())) {
+            etAge.setError("Age is required");
+            isValid = false;
+        } else if (!TextUtils.isDigitsOnly(etAge.getText())) {
+            etAge.setError("Enter valid age");
+            isValid = false;
+        }
+        if (TextUtils.isEmpty(etBloodGroup.getText())) {
+            etBloodGroup.setError("Blood group is required");
+            isValid = false;
+        }
+        if (TextUtils.isEmpty(etEmergencyContact1.getText())) {
+            etEmergencyContact1.setError("At least one emergency contact is required");
+            isValid = false;
+        } else if (!isValidPhoneNumber(etEmergencyContact1.getText().toString())) {
+            etEmergencyContact1.setError("Enter valid phone number");
+            isValid = false;
+        }
+        if (!TextUtils.isEmpty(etEmergencyContact2.getText()) &&
+                !isValidPhoneNumber(etEmergencyContact2.getText().toString())) {
+            etEmergencyContact2.setError("Enter valid phone number");
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    private boolean isValidPhoneNumber(String phone) {
+        // Simple phone validation - adjust as needed
+        return phone.matches("^[0-9]{10,15}$");
+    }
+
+    private void showToast(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+}

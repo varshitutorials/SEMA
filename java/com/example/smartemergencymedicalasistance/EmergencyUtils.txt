@@ -1,0 +1,27 @@
+package com.example.smartemergencymedicalasistance.utils;
+
+import android.Manifest;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.telephony.SmsManager;
+import android.widget.Toast;
+
+import androidx.core.content.ContextCompat;
+
+public class EmergencyUtils {
+    public static void sendEmergencySMS(Context context, String number, String message) {
+        try {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS)
+                    == PackageManager.PERMISSION_GRANTED) {
+                SmsManager smsManager = SmsManager.getDefault();
+                smsManager.sendTextMessage(number, null, message, null, null);
+            }
+        } catch (Exception e) {
+            Toast.makeText(context, "SMS failed to " + number, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public static String createLocationUrl(double lat, double lng) {
+        return String.format("https://maps.google.com/maps?q=%.6f,%.6f", lat, lng);
+    }
+}

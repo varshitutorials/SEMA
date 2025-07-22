@@ -1,0 +1,106 @@
+package com.example.smartemergencymedicalasistance;
+
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
+public class LoginActivity extends AppCompatActivity {
+    private FirebaseAuth auth;
+    private EditText etEmail, etPassword;
+    private static final String PREFS_NAME = "user_prefs";
+    private static final String PROFILE_COMPLETED_KEY = "profile_completed";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_login);
+        auth = FirebaseAuth.getInstance();
+
+        etEmail = findViewById(R.id.etEmail);
+        etPassword = findViewById(R.id.etPassword);
+
+        // Check if user is already logged in
+        FirebaseUser currentUser = auth.getCurrentUser();
+        if (currentUser != null) {
+            navigateBasedOnProfileStatus(currentUser.getUid());
+            return;
+        }
+
+        setupLoginButton();
+    }
+
+    private void setupLoginButton() {
+        findViewById(R.id.btnLogin).setOnClickListener(v -> {
+            String email = etEmail.getText().toString().trim();
+            String password = etPassword.getText().toString().trim();
+
+            if (validateInputs(email, password)) {
+                loginOrRegisterUser(email, password);
+            }
+        });
+    }
+
+    private boolean validateInputs(String email, String password) {
+        if (email.isEmpty()) {
+            etEmail.setError("Email is required");
+            return false;
+        }
+        if (password.isEmpty()) {
+            etPassword.setError("Password is required");
+            return false;
+        }
+        if (password.length() < 6) {
+            etPassword.setError("Password must be at least 6 characters");
+            return false;
+        }
+        return true;
+    }
+
+    private void loginOrRegisterUser(String email, String password) {
+        auth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        // Login success
+                        FirebaseUser user = auth.getCurrentUser();
+                        navigateBasedOnProfileStatus(user.getUid());
+                    } else {
+                        // If login fails, try to create a new account
+                        createNewUser(email, password);
+                    }
+                });
+    }
+
+    private void createNewUser(String email, String password) {
+        auth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        FirebaseUser user = auth.getCurrentUser();
+                        navigateBasedOnProfileStatus(user.getUid());
+                    } else {
+                        Toast.makeText(LoginActivity.this,
+                                "Authentication failed: " + task.getException().getMessage(),
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
+    private void navigateBasedOnProfileStatus(String uid) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean isProfileComplete = prefs.getBoolean(PROFILE_COMPLETED_KEY, false);
+
+        Intent intent = isProfileComplete ?
+                new Intent(this, SosActivity.class) :
+                new Intent(this, ProfileActivity.class);
+
+        startActivity(intent);
+        finish();
+    }
+}

@@ -1,0 +1,37 @@
+package com.example.smartemergencymedicalasistance.services;
+
+import android.app.Service;
+import android.content.Intent;
+import android.os.IBinder;
+import android.util.Log;
+
+import androidx.annotation.Nullable;
+
+public class LocationTrackingService extends Service {
+    private static final String TAG = "LocationService";
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        Log.d(TAG, "Location tracking service created");
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "Location tracking service started");
+        // Implement your location tracking logic here
+        return START_STICKY;
+    }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "Location tracking service destroyed");
+    }
+}

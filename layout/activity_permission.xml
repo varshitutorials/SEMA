@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#e0e0e0">
+
+    <!-- App Logo (Optional) -->
+    <ImageView
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:src="@drawable/ic_medical_logo"
+        android:contentDescription="@string/app_logo"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- Permission Explanation Card -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="@android:color/white">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <TextView
+                android:id="@+id/permissionExplanationText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Essential Permissions Required"
+                android:textSize="18sp"
+                android:textColor="#212121"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="• SMS - To send emergency alerts\n• Phone Calls - To contact emergency services\n• Location - To locate nearby hospitals"
+                android:textSize="16sp"
+                android:textColor="#757575"
+                android:lineSpacingExtra="4dp"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Grant Permissions Button (Dark Red #8B0000) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/grantPermissionsBtn"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Grant Permissions"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:cornerRadius="8dp"
+        app:backgroundTint="#8B0000"
+    app:elevation="4dp"/>
+
+    <!-- Learn More Link (Medium Blue #0000CD) -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Why these permissions?"
+        android:textColor="#0000CD"
+    android:textSize="14sp"
+    android:layout_marginTop="16dp"
+    android:clickable="true"
+    android:focusable="true"/>
+</LinearLayout>

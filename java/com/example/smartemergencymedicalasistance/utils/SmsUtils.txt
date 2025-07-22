@@ -1,0 +1,84 @@
+package com.example.smartemergencymedicalasistance.utils;
+
+import android.Manifest;
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.telephony.SmsManager;
+import android.widget.Toast;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+/**
+ * Utility class for handling SMS and call permissions and actions.
+ */
+public class SmsUtils {
+
+    public static final int SMS_PERMISSION_REQUEST_CODE = 101;
+    public static final int CALL_PERMISSION_REQUEST_CODE = 102;
+
+    /**
+     * Checks if SEND_SMS permission is granted.
+     */
+    public static boolean hasSmsPermission(Context context) {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Checks if CALL_PHONE permission is granted.
+     */
+    public static boolean hasCallPermission(Context context) {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Requests SEND_SMS permission from the user.
+     */
+    public static void requestSmsPermission(Activity activity) {
+        ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.SEND_SMS}, SMS_PERMISSION_REQUEST_CODE);
+    }
+
+    /**
+     * Requests CALL_PHONE permission from the user.
+     */
+    public static void requestCallPermission(Activity activity) {
+        ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CALL_PHONE}, CALL_PERMISSION_REQUEST_CODE);
+    }
+
+    /**
+     * Sends SMS to the given phone number with message text.
+     */
+    public static void sendSms(Context context, String phoneNumber, String message) {
+        try {
+            SmsManager smsManager = SmsManager.getDefault();
+            smsManager.sendTextMessage(phoneNumber, null, message, null, null);
+            Toast.makeText(context, "SMS sent to " + phoneNumber, Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(context, "Failed to send SMS to " + phoneNumber, Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Makes a phone call to the given phone number.
+     * Caller must ensure CALL_PHONE permission is granted before calling this method.
+     */
+    public static void makeCall(Context context, String phoneNumber) {
+        if (!hasCallPermission(context)) {
+            Toast.makeText(context, "CALL_PHONE permission not granted.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            Intent intent = new Intent(Intent.ACTION_CALL);
+            intent.setData(Uri.parse("tel:" + phoneNumber));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // Add this line to avoid crash if context is not an Activity
+            context.startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(context, "Failed to make call to " + phoneNumber, Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+    }
+}
